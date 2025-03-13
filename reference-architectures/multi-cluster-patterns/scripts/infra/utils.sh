@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# env_utils.sh
+# utils.sh
+echo "Start"
 
 check_env_vars() {
   if [[ -z "$PROJECT_ID" ]]; then
@@ -9,7 +10,7 @@ check_env_vars() {
     return 1
   fi
 
-  if [[ -z "$CLOUDSDK_COMPUTE_REGION" ]]; then
+  if [[ -z "$REGION" ]]; then
     echo "Warning: REGION environment variable is not set. Using default region."
     REGION="us-central1"
     gcloud config set compute/region $REGION
@@ -47,5 +48,6 @@ check_env_vars() {
     export CLUSTER_2_NAME="gke-$CLUSTER_2_REGION"
   fi
 
+  echo "All environment variables set"
   return 0
 }

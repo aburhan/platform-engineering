@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # GKE version (you can set this as an environment variable or define it here)
-VERSION="latest" # Or a specific version like "1.28.2-gke.100"
+export VERSION="latest" # Or a specific version like "1.28.2-gke.100"
 
 # Fleet name
-FLEET_NAME="my_fleet"
+export FLEET_NAME="my-fleet"
 
 # Create fleet
 echo "Creating fleet '$FLEET_NAME'..."
-gcloud container fleet create "$FLEET_NAME" --project="$PROJECT_ID"
+#gcloud container fleet create --display-name=$FLEET_NAME --project=$PROJECT_ID
 
 if [ $? -ne 0 ]; then
   echo "Failed to create fleet."
@@ -17,7 +17,7 @@ fi
 
 # 2 Zonal cluster setup
 echo "Creating cluster '$CLUSTER_1_NAME' in zone '$CLUSTER_1_ZONE'..."
-gcloud container clusters create "$CLUSTER_1_NAME" --async \
+gcloud container clusters create "$CLUSTER_1_NAME" \
     --gateway-api=standard \
     --zone="$CLUSTER_1_ZONE" \
     --workload-pool="$PROJECT_ID.svc.id.goog" \
@@ -31,7 +31,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Creating cluster '$CLUSTER_2_NAME' in zone '$CLUSTER_2_ZONE'..."
-gcloud container clusters create "$CLUSTER_2_NAME" --async \
+gcloud container clusters create "$CLUSTER_2_NAME" \
     --gateway-api=standard \
     --zone="$CLUSTER_2_ZONE" \
     --workload-pool="$PROJECT_ID.svc.id.goog" \

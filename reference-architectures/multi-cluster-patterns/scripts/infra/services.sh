@@ -1,5 +1,5 @@
 # Source the library file
-source ./env_utils.sh
+source ./infra/utils.sh
 
 # Check environment variables
 if ! check_env_vars; then

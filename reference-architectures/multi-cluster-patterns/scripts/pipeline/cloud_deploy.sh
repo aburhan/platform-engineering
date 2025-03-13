@@ -1,17 +1,29 @@
-#!/bin/bash
+##!/bin/bash
 
-# Source the environment variable check function
-source ./env_utils.sh
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member=serviceAccount:$(gcloud projects describe $PROJECT_ID \
+    --format="value(projectNumber)")-compute@developer.gserviceaccount.com \
+    --role="roles/clouddeploy.jobRunner"
 
-# Check environment variables
-if ! check_env_vars; then
-  exit 1
-fi
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member=serviceAccount:$(gcloud projects describe $PROJECT_ID \
+    --format="value(projectNumber)")-compute@developer.gserviceaccount.com \
+    --role="roles/container.developer"
+
+gcloud iam service-accounts add-iam-policy-binding $(gcloud projects describe $PROJECT_ID \
+    --format="value(projectNumber)")-compute@developer.gserviceaccount.com \
+    --member=serviceAccount:$(gcloud projects describe $PROJECT_ID \
+    --format="value(projectNumber)")-compute@developer.gserviceaccount.com \
+    --role="roles/iam.serviceAccountUser" \
+    --project=$PROJECT_ID
+
+
 
 # Cloud Deploy variables
-PIPELINE_NAME="whereami-pipeline"
-TARGET_1_NAME="gke-$CLUSTER_1_REGION"
-TARGET_2_NAME="gke-$CLUSTER_2_REGION"
+PIPELINE_NAME="pipeline"
+TARGET_1_NAME="gke-a"
+TARGET_2_NAME="gke-b"
 REGION="$CLUSTER_1_REGION" # Assuming both clusters are in the same region
 
 # Git repository details (replace with your values)

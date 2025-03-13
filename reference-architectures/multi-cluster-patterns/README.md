@@ -67,6 +67,7 @@ export CLUSTER_2_REGION=us-west1
 export CLUSTER_1_NAME=my-cluster-1
 export CLUSTER_2_NAME=my-cluster-2
 
+gcloud config set project $PROJECT_ID
 chmod +x deploy.sh infra/*.sh multi-cluster-service/*.sh \
          deploy-app/*.sh multi-cluster-lb/*.sh pipeline/*.sh
 
