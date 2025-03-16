@@ -1,0 +1,187 @@
+terraform {
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+}
+resource "google_project_service" "enable_service" {
+  for_each                   = toset(var.services)
+  project                    = var.project_id
+  service                    = each.value
+  disable_on_destroy         = false
+  disable_dependent_services = false
+}
+module "vpc" {
+  source            = "../modules/vpc"
+  vpc_name          = var.vpc_name
+  project_id        = var.project_id
+  proxy_subnet_name = var.proxy_subnet_name
+  proxy_subnet_cidr = var.proxy_subnet_cidr
+  region            = var.region
+  depends_on        = [google_project_service.enable_service]
+}
+
+data "google_client_config" "default" {}
+
+# Create zonal clusters
+module "cluster1" {
+  source        = "../modules/gke/standard"
+  project_id    = var.project_id
+  cluster_name  = var.cluster1_name
+  location      = var.zone1
+  network_id    = module.vpc.vpc_id
+  subnetwork_id = module.vpc.proxy_subnet_id
+  depends_on    = [module.vpc,google_project_service.enable_service]
+}
+
+data "google_container_cluster" "cluster1" {
+  name     = var.cluster1_name
+  location = var.zone1
+}
+
+provider "kubernetes" {
+  host                   = "https://${data.google_container_cluster.cluster1.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(data.google_container_cluster.cluster1.master_auth[0].cluster_ca_certificate)
+  alias = "cluster1"
+}
+module "deployapp"{
+  source = "../modules/k8s/demo_app"
+  app_name = var.app_name
+  app_version = var.app_version
+  namespace_name = var.namespace_name
+  cluster_name = var.cluster1_name
+  providers = {
+    kubernetes = kubernetes.cluster1
+  }
+  d
+}
+
+module "kubernetes_manifest" {
+  source = "../modules/k8s/service_export"
+  cluster_name = var.cluster1_name
+  service_name = var.app_service_name
+  app_name = var.app_name
+  namespace_name =var.namespace_name
+  providers = {
+    kubernetes = kubernetes.cluster1
+  }
+}
+
+module "cluster2" {
+  source        = "../modules/gke/standard"
+  project_id    = var.project_id
+  cluster_name  = var.cluster2_name
+  location      = var.zone2
+  network_id    = module.vpc.vpc_id
+  subnetwork_id = module.vpc.proxy_subnet_id
+  depends_on    = [module.vpc]
+}
+data "google_container_cluster" "cluster2" {
+  name     = var.cluster2_name
+  location = var.zone2
+}
+
+provider "kubernetes" {
+  host                   = "https://${data.google_container_cluster.cluster2.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(data.google_container_cluster.cluster2.master_auth[0].cluster_ca_certificate)
+  alias = "cluster2"
+}
+module "deployapp2"{
+  source = "../modules/k8s/demo_app"
+  app_name = var.app_name
+  app_version = var.app_version
+  namespace_name = var.namespace_name
+  cluster_name = var.cluster2_name
+  providers = {
+    kubernetes = kubernetes.cluster2
+  }
+}
+module "kubernetes_manifest2" {
+  source = "../modules/k8s/service_export"
+  cluster_name = var.cluster2_name
+  service_name = var.app_service_name
+  app_name = var.app_name
+  namespace_name =var.namespace_name
+  providers = {
+    kubernetes = kubernetes.cluster2
+  }
+}
+
+module "multi_cluster_service" {
+  source        = "../modules/multi_cluster_service"
+  project_id    = var.project_id
+}
+
+
+module "multi_cluster_gateway" {
+  source = "../modules/multi_cluster_gateway"
+  project_id = var.project_id
+  region = var.region
+  membership = var.cluster2_name
+}
+
+module "gateway_and_route" {
+  source = "../modules/k8s/gateway_route"
+
+  namespace_name             = var.namespace_name
+  http_route_name            = "public-${var.app_name}-route"
+  http_route_parent_ref_name = "external-http"
+  http_route_hostname        = "${var.app_name}.example.com"
+  gateway_config = {
+      api_version          = "gateway.networking.k8s.io/v1beta1"
+      kind                 = "Gateway"
+      name                 = "external-http"
+      gateway_class_name   = "gke-l7-global-external-managed-mc"
+      listener_name        = "http"
+      listener_protocol    = "HTTP"
+      listener_port        = 80
+  }
+  http_route_rules = [
+    {
+      path_prefix  = "/${var.cluster1_name}"
+      backend_name = "${var.app_name}-${var.cluster1_name}"
+      backend_port = 8080
+    },
+    {
+      path_prefix  = "/${var.cluster2_name}"
+      backend_name = "${var.app_name}-${var.cluster2_name}"
+      backend_port = 8080
+    },
+    {
+      path_prefix  = "/"
+      backend_name = var.app_name
+      backend_port = 8080
+    }
+  ]
+  providers = {
+    kubernetes = kubernetes.cluster2
+  }
+}
+/*
+# Example: Enable multi-cluster gateway (or use multi_cluster_ingress similarly)
+module "north_south" {
+  source         = "./modules/multi_cluster_gateway"
+  mcg_name       = var.mcg_name
+  url_map        = var.url_map
+  ssl_certificates = var.ssl_certificates
+  project_id     = var.project_id
+}
+
+module "cloud_deploy" {
+  source        = "./modules/cloud_deploy"
+  pipeline_name = var.pipeline_name
+  project_id    = var.project_id
+  region        = var.region
+  target_id     = var.pipeline_target_id
+  profile       = var.pipeline_profile
+}
+
+# New: Fleet module to register the cluster with GKE Hub
+module "fleet" {
+  source          = "./modules/fleet"
+  membership_name = var.membership_name
+  project_id      = var.project_id
+  region          = var.region
+}
+*/
