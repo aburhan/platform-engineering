@@ -174,7 +174,7 @@ Follow these instructions to create the architecture and use it:
     **Note:** It takes around 30 mins for the entire architecture to get
     deployed.
 
-## Review the deployed architecture
+### Review the deployed architecture
 
 Once the Terraform apply has successfully finished, the example architecture
 will be deployed in the your Google Cloud project. Before exercising the
@@ -182,7 +182,7 @@ rotation process, review and verify the deployment in the Google Cloud Console.
 
 ### Review Cloud SQL database
 
-1.  In the Cloud Console, using the naviagion menu select `Databases > SQL`.
+1.  In the Cloud Console, using the naviagion menu select `Databases > Cloud SQL`.
     Confirm that `cloudsql-for-pg` is present in the instance list.
 2.  Click on `cloudsql-for-pg`, to open the instance details page.
 3.  In the left hand menu select `Users`. Confirm you see a user with the name
@@ -196,7 +196,7 @@ rotation process, review and verify the deployment in the Google Cloud Console.
 
 ### Review Secret Manager
 
-1.  In the Cloud Console, using the naviagion menu select
+1.  In the Cloud Console, using the navigation menu select
     `Security > Secret Manager`. Confirm that `cloudsql-pswd` is present in the
     list.
 2.  Click on `cloudsql-pswd`.
@@ -232,11 +232,8 @@ rotation process, review and verify the deployment in the Google Cloud Console.
     Function.
 5.  Click on the `Details` tab. Confirm, the `Audience` tag shows the rotator
     Cloud Function.
-6.  In the left hand menu select `Topic`.
-7.  Click on `pswd-rotation-topic`.
-8.  Click on the `Details` tab.
-9.  Click on the schema in the `Schema name` field.
-10. In the `Details`, confirm that the schema contains these keys: `secretid`,
+6.  Click on the schema in the `Schema name` field.
+7. In the `Details`, confirm that the schema contains these keys: `secretid`,
     `instance_name`, `db_user`, `db_name` and `db_location`. These keys will be
     used to identify what database and user password is to be rotated.
 
